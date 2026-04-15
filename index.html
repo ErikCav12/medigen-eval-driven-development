@@ -1,0 +1,1856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eval-Driven Development — MediGen Synthesis Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================
+     GLOBAL / SCROLL SNAP
+     ============================================ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .slide {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 40px 40px;
+    position: relative;
+  }
+
+  /* Slide counter — hidden in article mode */
+  .slide-counter {
+    display: none;
+  }
+
+  /* Scroll hint on first slide */
+  .scroll-hint {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.35;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    animation: bounce-hint 2s ease-in-out infinite;
+  }
+
+  .scroll-hint .arrow {
+    width: 1px;
+    height: 20px;
+    position: relative;
+  }
+
+  .scroll-hint .arrow::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -3px;
+    border: 3px solid transparent;
+  }
+
+  @keyframes bounce-hint {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(6px); }
+  }
+
+
+  /* ============================================
+     SLIDE 1: HERO (warm brand theme)
+     ============================================ */
+  .slide--hero {
+    background: var(--bg);
+    color: var(--text-dark);
+  }
+
+  .slide--hero .slide-counter { color: var(--text-faint); }
+
+  .slide--hero .scroll-hint {
+    color: var(--text-light);
+  }
+  .slide--hero .scroll-hint .arrow {
+    background: var(--text-light);
+  }
+  .slide--hero .scroll-hint .arrow::after {
+    border-top-color: var(--text-light);
+  }
+
+  .hero-banner {
+    width: 100%;
+    max-width: 780px;
+    aspect-ratio: 16/9;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+  }
+
+  .hero-half {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 32px 24px;
+  }
+
+  .hero-half.chaos {
+    background:
+      radial-gradient(ellipse at 30% 60%, rgba(192,57,43,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 30%, rgba(196,127,23,0.04) 0%, transparent 50%),
+      var(--bg-white);
+  }
+
+  .hero-half.order {
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(61,153,112,0.06) 0%, transparent 60%),
+      var(--bg-white);
+  }
+
+  .hero-divider {
+    width: 1px;
+    background: linear-gradient(180deg, transparent, var(--border), transparent);
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-divider::after {
+    content: 'VS';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--text-faint);
+    background: var(--bg-white);
+    padding: 12px 8px;
+  }
+
+  .hero-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 24px;
+  }
+
+  .hero-icon {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .chaos-visual { position: relative; width: 100%; height: 100%; }
+
+  .chaos-visual .car-dot {
+    position: absolute; width: 14px; height: 14px;
+    background: var(--red); border-radius: 50%;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    box-shadow: 0 0 24px rgba(192,57,43,0.35);
+    animation: pulse-red 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 20px rgba(192,57,43,0.25); }
+    50% { box-shadow: 0 0 40px rgba(192,57,43,0.45); }
+  }
+
+  .chaos-visual .scatter-line {
+    position: absolute; top: 50%; left: 50%;
+    height: 1.5px; transform-origin: left center;
+  }
+  .chaos-visual .scatter-line:nth-child(2) { width: 85px; background: linear-gradient(90deg, var(--red), transparent); transform: rotate(18deg); }
+  .chaos-visual .scatter-line:nth-child(3) { width: 65px; background: linear-gradient(90deg, var(--amber), transparent); transform: rotate(82deg); opacity: 0.6; }
+  .chaos-visual .scatter-line:nth-child(4) { width: 95px; background: linear-gradient(90deg, var(--red), transparent); transform: rotate(155deg); opacity: 0.4; }
+  .chaos-visual .scatter-line:nth-child(5) { width: 55px; background: linear-gradient(90deg, var(--amber), transparent); transform: rotate(225deg); opacity: 0.5; }
+  .chaos-visual .scatter-line:nth-child(6) { width: 75px; background: linear-gradient(90deg, var(--red), transparent); transform: rotate(295deg); opacity: 0.35; }
+  .chaos-visual .scatter-line:nth-child(7) { width: 60px; background: linear-gradient(90deg, var(--amber), transparent); transform: rotate(345deg); opacity: 0.45; }
+
+  .chaos-visual .question-mark {
+    position: absolute; font-family: 'DM Mono', monospace;
+    font-size: 16px; color: var(--red); opacity: 0.3;
+    animation: drift 4s ease-in-out infinite;
+  }
+  .chaos-visual .question-mark:nth-of-type(8)  { top: 8px; right: 18px; animation-delay: 0s; }
+  .chaos-visual .question-mark:nth-of-type(9)  { bottom: 16px; left: 8px; animation-delay: 1.3s; }
+  .chaos-visual .question-mark:nth-of-type(10) { top: 28px; left: 28px; animation-delay: 2.6s; }
+  .chaos-visual .question-mark:nth-of-type(11) { bottom: 30px; right: 30px; animation-delay: 0.8s; }
+
+  @keyframes drift {
+    0%, 100% { transform: translateY(0); opacity: 0.3; }
+    50% { transform: translateY(-4px); opacity: 0.5; }
+  }
+
+  .chaos-visual .crash {
+    position: absolute; bottom: 10px; right: 10px;
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    color: var(--red); opacity: 0.5; letter-spacing: 1px;
+    animation: blink-crash 3s ease-in-out infinite;
+  }
+
+  @keyframes blink-crash {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+  }
+
+  .order-visual { position: relative; width: 100%; height: 100%; }
+
+  .order-visual .track {
+    position: absolute; top: 50%; left: 8%; right: 8%; height: 2px;
+    background: linear-gradient(90deg, rgba(61,153,112,0.3), var(--green), var(--coral));
+    transform: translateY(-50%);
+  }
+
+  .order-visual .barrier {
+    position: absolute; left: 8%; right: 8%; height: 1px;
+    background: repeating-linear-gradient(90deg, var(--text-faint) 0px, var(--text-faint) 5px, transparent 5px, transparent 14px);
+    opacity: 0.4;
+  }
+  .order-visual .barrier.top { top: calc(50% - 20px); }
+  .order-visual .barrier.bottom { top: calc(50% + 20px); }
+
+  .order-visual .car-dot {
+    position: absolute; width: 14px; height: 14px;
+    background: var(--green); border-radius: 50%;
+    top: 50%; left: 62%; transform: translate(-50%, -50%);
+    box-shadow: 0 0 24px rgba(61,153,112,0.4);
+    animation: pulse-green 2s ease-in-out infinite;
+  }
+
+  .order-visual .trail {
+    position: absolute; top: 50%; left: 8%;
+    width: calc(62% - 8%); height: 2px;
+    transform: translateY(-50%);
+    background: linear-gradient(90deg, transparent, rgba(61,153,112,0.35));
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 20px rgba(61,153,112,0.3); }
+    50% { box-shadow: 0 0 40px rgba(61,153,112,0.5); }
+  }
+
+  .order-visual .finish-line {
+    position: absolute; right: 8%; top: calc(50% - 28px);
+    height: 56px; width: 4px;
+    background: repeating-linear-gradient(180deg, var(--text-dark) 0px, var(--text-dark) 4px, var(--bg-white) 4px, var(--bg-white) 8px);
+    opacity: 0.25;
+  }
+
+  .order-visual .telemetry {
+    position: absolute; bottom: 12px; left: 12px;
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    color: var(--green); opacity: 0.6; line-height: 1.7;
+  }
+
+  .order-visual .telemetry-right {
+    position: absolute; bottom: 12px; right: 12px;
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    color: var(--coral); opacity: 0.5; line-height: 1.7; text-align: right;
+  }
+
+  .hero-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px; font-weight: 400;
+    text-align: center; line-height: 1.3; margin-bottom: 10px;
+  }
+  .hero-half.chaos .hero-title { color: var(--red); }
+  .hero-half.order .hero-title { color: var(--green); }
+
+  .hero-subtitle {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--text-mid); text-align: center;
+    line-height: 1.6; max-width: 240px;
+  }
+
+
+  /* ============================================
+     WARM BRAND THEME (slides 2–6)
+     ============================================ */
+  :root {
+    --bg: #f5f2ee;
+    --bg-white: #ffffff;
+    --bg-warm: #faf7f4;
+    --coral: #d4745b;
+    --coral-light: rgba(212,116,91,0.08);
+    --coral-mid: rgba(212,116,91,0.15);
+    --coral-border: rgba(212,116,91,0.25);
+    --green: #3d9970;
+    --green-light: rgba(61,153,112,0.08);
+    --green-border: rgba(61,153,112,0.25);
+    --red: #c0392b;
+    --red-light: rgba(192,57,43,0.06);
+    --amber: #c47f17;
+    --amber-light: rgba(196,127,23,0.08);
+    --amber-border: rgba(196,127,23,0.25);
+    --blue: #4a7fb5;
+    --blue-light: rgba(74,127,181,0.08);
+    --blue-border: rgba(74,127,181,0.25);
+    --cyan: #2a8a8a;
+    --cyan-light: rgba(42,138,138,0.08);
+    --cyan-border: rgba(42,138,138,0.25);
+    --text-dark: #2c2c2c;
+    --text-mid: #5a5a5a;
+    --text-light: #999999;
+    --text-faint: #bcbcbc;
+    --border: #e5e0db;
+    --border-light: #eee9e4;
+  }
+
+  .slide--warm {
+    background: var(--bg);
+    color: var(--text-dark);
+  }
+
+  .slide--warm .slide-counter { color: var(--text-faint); }
+
+  .canvas {
+    width: 100%;
+    max-width: 780px;
+    background: var(--bg-warm);
+    border-radius: 4px;
+    border: 1px solid var(--border-light);
+    padding: 36px 44px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .canvas::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 80%, rgba(212,116,91,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(212,116,91,0.03) 0%, transparent 40%);
+    pointer-events: none;
+  }
+
+  /* Shared header bar */
+  .header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 24px; position: relative; z-index: 1;
+  }
+
+  .header-number {
+    font-family: 'Instrument Serif', serif; font-size: 14px;
+    color: var(--coral); width: 32px; height: 32px;
+    border: 1.5px solid var(--coral-border); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+
+  .header-text {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--text-light);
+  }
+
+  .header-line {
+    flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* Tagline */
+  .tagline {
+    margin-top: 24px; text-align: center;
+    position: relative; z-index: 1;
+  }
+
+  .tagline-text {
+    font-family: 'Instrument Serif', serif;
+    font-size: 17px; font-style: italic; color: var(--text-mid);
+  }
+
+  .tagline-line {
+    width: 40px; height: 1px;
+    background: var(--border); margin: 16px auto 0;
+  }
+
+
+  /* ============================================
+     SLIDE 2: PRINCIPLE 1 — DEFINE SUCCESS
+     ============================================ */
+  .p1-main {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 28px; position: relative; z-index: 1;
+  }
+
+  .chat-panel {
+    background: var(--bg-white);
+    border: 1px solid var(--border); border-radius: 3px;
+    overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .chat-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .chat-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--coral-light);
+    border: 1.5px solid var(--coral-border);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .chat-name { font-size: 13px; font-weight: 600; color: var(--text-dark); }
+
+  .chat-status {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    color: var(--green); margin-left: auto;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .chat-status::before {
+    content: ''; width: 5px; height: 5px;
+    border-radius: 50%; background: var(--green);
+  }
+
+  .chat-body {
+    padding: 20px; display: flex;
+    flex-direction: column; gap: 14px;
+  }
+
+  .msg {
+    max-width: 88%; padding: 12px 16px;
+    font-size: 13px; line-height: 1.6; border-radius: 3px;
+  }
+  .msg.user {
+    align-self: flex-end; background: var(--coral);
+    color: white; border-bottom-right-radius: 0;
+  }
+  .msg.bot {
+    align-self: flex-start; background: var(--bg);
+    color: var(--text-dark); border: 1px solid var(--border-light);
+    border-bottom-left-radius: 0;
+  }
+
+  .msg-label {
+    font-family: 'DM Mono', monospace; font-size: 8px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-faint); margin-bottom: 4px;
+  }
+  .msg.user .msg-label { color: rgba(255,255,255,0.6); }
+
+  .msg .cite { display: inline; border-bottom: 1px dashed var(--coral); }
+
+  .msg .policy-ref {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--text-light); margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .criteria-panel {
+    display: flex; flex-direction: column;
+    justify-content: center; gap: 8px;
+  }
+
+  .criteria-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px; font-weight: 400;
+    color: var(--text-dark); margin-bottom: 4px; line-height: 1.3;
+  }
+  .criteria-title em { color: var(--coral); font-style: italic; }
+
+  .criteria-subtitle {
+    font-size: 14px; color: var(--text-mid);
+    line-height: 1.6; margin-bottom: 20px;
+  }
+
+  .criteria-list { display: flex; flex-direction: column; gap: 0; }
+
+  .criterion {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 0; border-bottom: 1px solid var(--border-light);
+    position: relative; transition: background 0.2s ease;
+  }
+  .criterion:last-child { border-bottom: none; }
+  .criterion:hover {
+    background: rgba(212,116,91,0.02);
+    margin: 0 -16px; padding-left: 16px; padding-right: 16px; border-radius: 2px;
+  }
+
+  .criterion-check {
+    width: 22px; height: 22px; border-radius: 50%;
+    flex-shrink: 0; display: flex; align-items: center;
+    justify-content: center; margin-top: 1px;
+    font-size: 11px; font-weight: 600;
+  }
+  .criterion-check.pass {
+    background: var(--green-light);
+    border: 1.5px solid var(--green-border); color: var(--green);
+  }
+  .criterion-check.fail {
+    background: var(--red-light);
+    border: 1.5px solid rgba(192,57,43,0.25); color: var(--red);
+  }
+
+  .criterion-content { flex: 1; }
+
+  .criterion-question {
+    font-size: 14px; font-weight: 500;
+    color: var(--text-dark); margin-bottom: 4px; line-height: 1.4;
+  }
+
+  .criterion-detail {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--text-light); line-height: 1.5;
+  }
+
+  .criterion-result {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    font-weight: 500; padding: 3px 10px; border-radius: 2px;
+    align-self: center; flex-shrink: 0;
+  }
+  .criterion-result.pass { color: var(--green); background: var(--green-light); }
+  .criterion-result.fail { color: var(--red); background: var(--red-light); }
+
+
+  /* ============================================
+     SLIDE 3: PRINCIPLE 2 — DEFENCE IN DEPTH
+     ============================================ */
+  .sequence-diagram {
+    position: relative; z-index: 1;
+    padding: 20px 0 10px;
+  }
+
+  /* Pipeline lane (horizontal backbone) */
+  .seq-pipeline {
+    display: flex; align-items: center;
+    gap: 0; position: relative;
+    padding: 0 20px;
+  }
+
+  /* Each pipeline step */
+  .seq-step {
+    display: flex; flex-direction: column;
+    align-items: center; position: relative;
+    flex: 1;
+  }
+
+  .seq-step-box {
+    background: var(--bg-white);
+    border: 1.5px solid var(--border);
+    border-radius: 3px;
+    padding: 16px 14px;
+    text-align: center;
+    width: 100%;
+    max-width: 160px;
+    position: relative;
+    z-index: 2;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .seq-step-box:hover {
+    border-color: var(--coral-border);
+    box-shadow: 0 2px 8px rgba(212,116,91,0.08);
+  }
+
+  .seq-step-label {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text-faint); margin-bottom: 6px;
+  }
+
+  .seq-step-name {
+    font-size: 14px; font-weight: 600;
+    color: var(--text-dark); margin-bottom: 4px;
+  }
+
+  .seq-step-desc {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--text-light); line-height: 1.4;
+  }
+
+  /* Arrows between steps */
+  .seq-arrow {
+    flex: 0 0 48px;
+    height: 1px;
+    background: var(--border);
+    position: relative;
+    z-index: 1;
+  }
+  .seq-arrow::after {
+    content: '';
+    position: absolute; right: -1px; top: -4px;
+    border: 4px solid transparent;
+    border-left: 6px solid var(--coral);
+  }
+
+  /* Start/end markers */
+  .seq-marker {
+    flex: 0 0 auto;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 6px;
+  }
+
+  .seq-marker-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%; border: 1.5px solid var(--coral);
+    background: var(--bg-warm);
+  }
+
+  .seq-marker-label {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text-light);
+  }
+
+  /* Eval checks hanging below each step */
+  .seq-eval-connector {
+    width: 1px; height: 24px;
+    background: repeating-linear-gradient(180deg, var(--text-faint) 0px, var(--text-faint) 3px, transparent 3px, transparent 7px);
+    margin: 0 auto;
+  }
+
+  .seq-eval-card {
+    background: var(--bg-white);
+    border-radius: 3px;
+    padding: 14px 16px;
+    width: 100%;
+    max-width: 200px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: transform 0.3s ease;
+  }
+  .seq-eval-card:hover { transform: translateY(2px); }
+
+  .seq-eval-card.eval-code {
+    border: 1px solid var(--blue-border);
+    border-top: 3px solid var(--blue);
+  }
+  .seq-eval-card.eval-judge {
+    border: 1px solid var(--amber-border);
+    border-top: 3px solid var(--amber);
+  }
+  .seq-eval-card.eval-human {
+    border: 1px solid var(--green-border);
+    border-top: 3px solid var(--green);
+  }
+
+  .seq-eval-type {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .eval-code .seq-eval-type { color: var(--blue); }
+  .eval-judge .seq-eval-type { color: var(--amber); }
+  .eval-human .seq-eval-type { color: var(--green); }
+
+  .seq-eval-question {
+    font-size: 12px; color: var(--text-mid);
+    line-height: 1.5; margin-bottom: 8px;
+  }
+
+  .seq-eval-result {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    font-weight: 500; padding: 2px 10px;
+    border-radius: 2px; display: inline-block;
+  }
+  .seq-eval-result.pass { color: var(--green); background: var(--green-light); }
+  .seq-eval-result.fail { color: var(--red); background: var(--red-light); }
+
+  /* Eval row layout */
+  .seq-evals-row {
+    display: flex; align-items: flex-start;
+    gap: 0; padding: 0 20px;
+    margin-top: 0;
+  }
+
+  .seq-eval-slot {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center;
+  }
+
+  /* Empty slots for start/end markers and arrows */
+  .seq-eval-spacer {
+    flex: 0 0 48px;
+  }
+  .seq-marker-spacer {
+    flex: 0 0 auto;
+    width: 10px;
+  }
+
+
+  /* ============================================
+     SLIDE 4: PRINCIPLE 3 — BINARY vs LIKERT
+     ============================================ */
+  .binary-comparison {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 32px; padding: 20px 0; position: relative; z-index: 1;
+  }
+
+  .comparison-side {
+    padding: 32px; border-radius: 3px;
+  }
+  .comparison-side.bad {
+    background: var(--red-light); border: 1px solid rgba(192,57,43,0.12);
+  }
+  .comparison-side.good {
+    background: var(--green-light); border: 1px solid rgba(61,153,112,0.12);
+  }
+
+  .comparison-badge {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: 3px; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 2px;
+    display: inline-block; margin-bottom: 20px;
+  }
+  .bad .comparison-badge { color: var(--red); background: rgba(192,57,43,0.08); border: 1px solid rgba(192,57,43,0.15); }
+  .good .comparison-badge { color: var(--green); background: rgba(61,153,112,0.08); border: 1px solid rgba(61,153,112,0.15); }
+
+  .comparison-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 24px; margin-bottom: 24px;
+  }
+  .bad .comparison-title { color: var(--red); }
+  .good .comparison-title { color: var(--green); }
+
+  .likert-scale {
+    display: flex; gap: 8px;
+    margin-bottom: 20px; align-items: flex-end;
+  }
+
+  .likert-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+  .likert-bar {
+    width: 40px; border-radius: 2px 2px 0 0;
+    background: rgba(192,57,43,0.1); border: 1px solid rgba(192,57,43,0.1); border-bottom: none;
+  }
+  .likert-bar.selected {
+    background: rgba(192,57,43,0.2); border-color: rgba(192,57,43,0.25);
+  }
+  .likert-bar.selected::after {
+    content: '?'; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'DM Mono', monospace; font-size: 14px; color: var(--red);
+  }
+
+  .likert-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-faint); }
+
+  .likert-question {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--text-mid); line-height: 1.6;
+    padding: 12px; background: rgba(192,57,43,0.03);
+    border-left: 2px solid rgba(192,57,43,0.15);
+  }
+
+  .binary-evals { display: flex; flex-direction: column; gap: 10px; }
+
+  .binary-eval-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; background: rgba(61,153,112,0.04);
+    border: 1px solid rgba(61,153,112,0.1); border-radius: 3px;
+  }
+
+  .binary-eval-question {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--text-mid); flex: 1;
+  }
+
+  .binary-eval-answer {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    font-weight: 500; padding: 3px 10px; border-radius: 2px;
+    margin-left: 16px; white-space: nowrap;
+  }
+  .binary-eval-answer.pass { color: var(--green); background: rgba(61,153,112,0.08); }
+  .binary-eval-answer.fail { color: var(--red); background: var(--red-light); }
+
+  .binary-tagline {
+    font-family: 'Instrument Serif', serif;
+    font-size: 16px; font-style: italic;
+    color: var(--text-mid); margin-top: 20px; text-align: center;
+  }
+
+
+  /* ============================================
+     SLIDE 5: PRINCIPLE 4 — FAILURE TAXONOMY
+     ============================================ */
+  .p4-layout {
+    display: grid; grid-template-columns: 340px 1fr;
+    gap: 28px; position: relative; z-index: 1;
+  }
+
+  /* Trace panel (left) */
+  .trace-panel {
+    background: var(--bg-white);
+    border: 1px solid var(--border); border-radius: 3px;
+    overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .trace-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .trace-header-title {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    font-weight: 500; color: var(--text-dark);
+  }
+
+  .trace-header-id {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    color: var(--text-faint); letter-spacing: 1px;
+  }
+
+  .trace-body { padding: 0; }
+
+  .trace-step {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .trace-step:last-child { border-bottom: none; }
+
+  .trace-step-icon {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 10px; margin-top: 1px;
+  }
+
+  .trace-step-icon.ok {
+    background: var(--green-light); border: 1px solid var(--green-border);
+    color: var(--green);
+  }
+  .trace-step-icon.err {
+    background: var(--red-light); border: 1px solid rgba(192,57,43,0.25);
+    color: var(--red);
+  }
+
+  .trace-step-content { flex: 1; }
+
+  .trace-step-label {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-faint); margin-bottom: 3px;
+  }
+
+  .trace-step-text {
+    font-size: 13px; color: var(--text-dark); line-height: 1.5;
+  }
+
+  .trace-step-detail {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--text-light); margin-top: 4px; line-height: 1.4;
+  }
+
+  .trace-step-highlight {
+    background: rgba(192,57,43,0.06);
+    border: 1px solid rgba(192,57,43,0.12);
+    border-radius: 2px; padding: 8px 12px; margin-top: 8px;
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--red); line-height: 1.5;
+  }
+
+  /* Diagnosis panel (right) */
+  .diagnosis-panel {
+    display: flex; flex-direction: column; gap: 20px;
+    justify-content: center;
+  }
+
+  .diagnosis-question {
+    font-family: 'Instrument Serif', serif;
+    font-size: 24px; color: var(--text-dark);
+    line-height: 1.3; margin-bottom: 4px;
+  }
+
+  .diagnosis-question em {
+    color: var(--coral); font-style: italic;
+  }
+
+  .diagnosis-card {
+    padding: 24px; border-radius: 3px;
+    position: relative; transition: transform 0.2s ease;
+  }
+  .diagnosis-card:hover { transform: translateX(4px); }
+
+  .diagnosis-card.spec {
+    background: var(--amber-light);
+    border: 1px solid rgba(196,127,23,0.15);
+    border-left: 4px solid var(--amber);
+  }
+  .diagnosis-card.gen {
+    background: var(--cyan-light);
+    border: 1px solid rgba(42,138,138,0.15);
+    border-left: 4px solid var(--cyan);
+  }
+
+  .diagnosis-card-type {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .spec .diagnosis-card-type { color: var(--amber); }
+  .gen .diagnosis-card-type { color: var(--cyan); }
+
+  .diagnosis-card-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 20px; color: var(--text-dark);
+    margin-bottom: 8px;
+  }
+
+  .diagnosis-card-desc {
+    font-size: 13px; color: var(--text-mid);
+    line-height: 1.6; margin-bottom: 12px;
+  }
+
+  .diagnosis-card-fix {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    font-weight: 500; display: flex; align-items: center; gap: 8px;
+  }
+  .spec .diagnosis-card-fix { color: var(--amber); }
+  .gen .diagnosis-card-fix { color: var(--cyan); }
+
+  .diagnosis-verdict {
+    background: var(--amber-light);
+    border: 1px solid rgba(196,127,23,0.2);
+    border-radius: 3px; padding: 14px 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .diagnosis-verdict-arrow {
+    font-size: 16px; color: var(--amber); flex-shrink: 0;
+  }
+
+  .diagnosis-verdict-text {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--amber); font-weight: 500; line-height: 1.5;
+  }
+
+
+  /* ============================================
+     SLIDE 6: PRINCIPLE 5 — EVAL LIFECYCLE
+     ============================================ */
+  .lifecycle {
+    display: flex; flex-direction: column;
+    align-items: center; padding: 20px 0;
+    position: relative; z-index: 1;
+  }
+
+  .lifecycle-ring {
+    position: relative; width: 420px; height: 400px;
+  }
+
+  .lifecycle-center {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); text-align: center; z-index: 3;
+  }
+
+  .lifecycle-center-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px; color: var(--text-dark); margin-bottom: 4px;
+  }
+
+  .lifecycle-center-sub {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--text-faint); letter-spacing: 2px;
+  }
+
+  /* Static dashed circle track */
+  .lifecycle-track {
+    position: absolute; top: 50%; left: 50%;
+    width: 280px; height: 280px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1.5px dashed var(--border);
+  }
+
+  /* Static curved arrows between nodes (SVG overlay) */
+  .lifecycle-arrows {
+    position: absolute; inset: 0; z-index: 1;
+    pointer-events: none;
+  }
+
+  .lifecycle-arrows svg {
+    width: 100%; height: 100%;
+  }
+
+  .lifecycle-arrows .arrow-path {
+    fill: none;
+    stroke: var(--coral);
+    stroke-width: 1.5;
+    stroke-dasharray: none;
+  }
+
+  .lifecycle-arrows .arrow-head {
+    fill: var(--coral);
+  }
+
+  .lifecycle-node {
+    position: absolute; width: 160px; padding: 20px;
+    background: var(--bg-white); border: 1px solid var(--border);
+    border-radius: 3px; text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    z-index: 2;
+  }
+
+  .lifecycle-node:nth-child(4) {
+    top: -10px; left: 50%; transform: translateX(-50%);
+    border-color: var(--green-border);
+  }
+
+  .lifecycle-node:nth-child(5) {
+    top: 50%; right: -50px; transform: translateY(-50%);
+    border-color: var(--coral-border);
+  }
+
+  .lifecycle-node:nth-child(6) {
+    bottom: -10px; left: 50%; transform: translateX(-50%);
+    border-color: var(--amber-border);
+  }
+
+  .lifecycle-node:nth-child(7) {
+    top: 50%; left: -50px; transform: translateY(-50%);
+    border-color: var(--blue-border);
+  }
+
+  .lifecycle-node-icon {
+    font-size: 18px; margin-bottom: 8px; color: var(--text-faint);
+  }
+
+  .lifecycle-node-title {
+    font-size: 13px; font-weight: 600; margin-bottom: 6px;
+  }
+  .lifecycle-node:nth-child(4) .lifecycle-node-title { color: var(--green); }
+  .lifecycle-node:nth-child(5) .lifecycle-node-title { color: var(--coral); }
+  .lifecycle-node:nth-child(6) .lifecycle-node-title { color: var(--amber); }
+  .lifecycle-node:nth-child(7) .lifecycle-node-title { color: var(--blue); }
+
+  .lifecycle-node-desc {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    color: var(--text-light); line-height: 1.5;
+  }
+
+
+  /* ============================================
+     SLIDE 7: 5 PRINCIPLES SUMMARY
+     ============================================ */
+  .principles-strip {
+    display: flex; gap: 2px;
+    position: relative; z-index: 1;
+  }
+
+  .principle-column {
+    flex: 1; padding: 36px 20px;
+    display: flex; flex-direction: column;
+    align-items: center; text-align: center;
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    transition: background 0.3s ease, border-color 0.3s ease;
+    position: relative;
+  }
+  .principle-column:first-child { border-radius: 3px 0 0 3px; }
+  .principle-column:last-child { border-radius: 0 3px 3px 0; }
+
+  .principle-column:hover {
+    background: var(--coral-light);
+    border-color: var(--coral-border);
+  }
+
+  .principle-number {
+    font-family: 'Instrument Serif', serif;
+    font-size: 48px; font-weight: 400; line-height: 1;
+    color: var(--border); margin-bottom: 20px;
+    transition: color 0.3s ease;
+  }
+  .principle-column:hover .principle-number { color: var(--coral-border); }
+
+  .principle-name {
+    font-size: 14px; font-weight: 600;
+    color: var(--text-dark); margin-bottom: 12px; line-height: 1.3;
+  }
+
+  .principle-one-liner {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--text-light); line-height: 1.6; max-width: 160px;
+  }
+
+  .principle-column::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+    height: 2px; background: var(--coral);
+    transform: scaleX(0); transition: transform 0.3s ease;
+  }
+  .principle-column:hover::after { transform: scaleX(1); }
+
+  /* ============================================
+     ARTICLE PROSE SECTIONS
+     ============================================ */
+  .article-section {
+    background: var(--bg);
+    display: flex;
+    justify-content: center;
+    padding: 48px 40px;
+    position: relative;
+  }
+
+  .article-section.dark-bg {
+    background: #faf7f4;
+  }
+
+  .prose {
+    width: 100%;
+    max-width: 680px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .prose h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 38px;
+    font-weight: 400;
+    color: var(--text-dark);
+    line-height: 1.25;
+    margin-bottom: 32px;
+  }
+
+  .prose h1 span {
+    color: var(--coral);
+  }
+
+  .prose h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--text-dark);
+    line-height: 1.3;
+    margin-bottom: 24px;
+    margin-top: 0;
+  }
+
+  .prose p {
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    color: var(--text-mid);
+    line-height: 1.8;
+    margin-bottom: 20px;
+  }
+
+  .prose p:last-child {
+    margin-bottom: 0;
+  }
+
+  .prose .closing-line {
+    font-family: 'Instrument Serif', serif;
+    font-size: 18px;
+    font-style: italic;
+    color: var(--text-dark);
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .prose hr {
+    border: none;
+    height: 1px;
+    background: var(--border);
+    margin: 40px 0;
+  }
+
+  .article-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--coral);
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  /* ============================================
+     HERO: DEVELOPMENT LIFECYCLE
+     ============================================ */
+  .dev-lifecycle {
+    width: 100%;
+    max-width: 780px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .dev-lifecycle-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--coral);
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  /* Top row: stage boxes + arrows */
+  .dl-stages {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+  }
+
+  .dl-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .dl-stage-box {
+    background: var(--bg-white);
+    border: 1.5px solid var(--border);
+    border-radius: 3px;
+    padding: 18px 14px;
+    text-align: center;
+    width: 100%;
+    max-width: 160px;
+    position: relative;
+    z-index: 2;
+    transition: border-color 0.3s ease;
+  }
+
+  .dl-stage-box:hover {
+    border-color: var(--coral-border);
+  }
+
+  .dl-stage-number {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+  }
+
+  .dl-stage-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+  }
+
+  .dl-arrow {
+    flex: 0 0 32px;
+    height: 1px;
+    background: var(--border);
+    position: relative;
+    z-index: 1;
+  }
+
+  .dl-arrow::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: -4px;
+    border: 4px solid transparent;
+    border-left: 6px solid var(--coral);
+  }
+
+  /* Bottom row: principle cards hanging below stages */
+  .dl-principles {
+    display: flex;
+    gap: 0;
+    margin-top: 0;
+  }
+
+  .dl-principle-slot {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 4px;
+  }
+
+  /* Spacers match arrows */
+  .dl-arrow-spacer {
+    flex: 0 0 32px;
+  }
+
+  .dl-connector {
+    width: 1px;
+    height: 20px;
+    background: repeating-linear-gradient(180deg, var(--text-faint) 0px, var(--text-faint) 3px, transparent 3px, transparent 7px);
+  }
+
+  .dl-principle-card {
+    background: var(--bg-white);
+    border-radius: 3px;
+    padding: 14px 14px;
+    width: 100%;
+    max-width: 180px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: transform 0.2s ease;
+  }
+
+  .dl-principle-card:hover {
+    transform: translateY(2px);
+  }
+
+  .dl-principle-card.p1 {
+    border: 1px solid var(--green-border);
+    border-top: 3px solid var(--green);
+  }
+  .dl-principle-card.p2 {
+    border: 1px solid var(--blue-border);
+    border-top: 3px solid var(--blue);
+  }
+  .dl-principle-card.p3 {
+    border: 1px solid var(--amber-border);
+    border-top: 3px solid var(--amber);
+  }
+  .dl-principle-card.p4 {
+    border: 1px solid var(--coral-border);
+    border-top: 3px solid var(--coral);
+  }
+  .dl-principle-card.p5 {
+    border: 1px solid var(--cyan-border);
+    border-top: 3px solid var(--cyan);
+  }
+
+  .dl-principle-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .dl-principle-card.p1 .dl-principle-num { color: var(--green); }
+  .dl-principle-card.p2 .dl-principle-num { color: var(--blue); }
+  .dl-principle-card.p3 .dl-principle-num { color: var(--amber); }
+  .dl-principle-card.p4 .dl-principle-num { color: var(--coral); }
+  .dl-principle-card.p5 .dl-principle-num { color: var(--cyan); }
+
+  .dl-principle-desc {
+    font-size: 12px;
+    color: var(--text-mid);
+    line-height: 1.5;
+  }
+
+  .dl-principle-desc strong {
+    color: var(--text-dark);
+    font-weight: 600;
+  }
+
+  /* Two-card column for stages with 2 principles */
+  .dl-two-cards {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  /* Empty stage indicator */
+  .dl-empty-stage {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text-faint);
+    letter-spacing: 1px;
+    text-align: center;
+    padding: 12px 0;
+    font-style: italic;
+  }
+
+  /* Loop-back arrow */
+  .dl-loop-back {
+    position: relative;
+    height: 36px;
+    margin-top: 16px;
+  }
+
+  .dl-loop-back svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .dl-loop-back .loop-path {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 1;
+    stroke-dasharray: 5 4;
+  }
+
+  .dl-loop-back .loop-head {
+    fill: var(--coral);
+  }
+
+  .dl-loop-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    background: var(--bg);
+    padding: 2px 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ==========================================
+     INTRO + HERO
+     ========================================== -->
+<div class="article-section">
+  <div class="prose">
+    <span class="article-label">Applied AI · MediGen Synthesis Engine</span>
+    <h1>Eval-driven development for the MediGen synthesis engine: 5 principles to peek into the <span>Black Box</span></h1>
+    <p>Imagine an F1 car with no track, no finish line and no barriers, just raw power on open ground. Everyone watching is blown away because it's fast and loud and looks incredible. But there's no goal, no way to know if it's even heading in the right direction, and without the fanfare of the track to notice, eventually it silently crashes into a mountain.</p>
+    <p>Now put that same car on a track with the same engine and the same speed. But here, the finish line tells you when you've won, the barriers nudge you back when you drift and keep you pointed in the direction of the finish line, and the telemetry tells you what to tune between laps.</p>
+    <p>That's the difference between an AI system built without evals and one built with them. It allows you to peek into the black box inner workings of an LLM. For MediGen, where researchers rely on the synthesis engine to pull cited answers from a corpus of 50,000 clinical and competitive intelligence documents, a polished demo is not enough. You have to go beyond shipping LLM-powered features that look great in demos but have no measurable definition of success and no way to catch failures before a researcher bases a decision on them.</p>
+    <p class="closing-line">Eval-driven development plants the synthesis engine firmly on the track. Here are five principles that map across the AI development lifecycle, from understanding the research problem through to production.</p>
+  </div>
+</div>
+
+<section class="slide slide--warm">
+  <div class="dev-lifecycle">
+    <div class="dev-lifecycle-label">AI Development Lifecycle</div>
+
+    <!-- Stage boxes row -->
+    <div class="dl-stages">
+      <div class="dl-stage">
+        <div class="dl-stage-box">
+          <div class="dl-stage-number">Stage 1</div>
+          <div class="dl-stage-name">Understand problem</div>
+        </div>
+      </div>
+      <div class="dl-arrow"></div>
+      <div class="dl-stage">
+        <div class="dl-stage-box">
+          <div class="dl-stage-number">Stage 2</div>
+          <div class="dl-stage-name">Define evals</div>
+        </div>
+      </div>
+      <div class="dl-arrow"></div>
+      <div class="dl-stage">
+        <div class="dl-stage-box">
+          <div class="dl-stage-number">Stage 3</div>
+          <div class="dl-stage-name">Build prototype</div>
+        </div>
+      </div>
+      <div class="dl-arrow"></div>
+      <div class="dl-stage">
+        <div class="dl-stage-box">
+          <div class="dl-stage-number">Stage 4</div>
+          <div class="dl-stage-name">Production</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Principle cards row -->
+    <div class="dl-principles">
+      <div class="dl-principle-slot">
+        <div class="dl-connector"></div>
+        <div class="dl-principle-card p1">
+          <div class="dl-principle-num">Principle 1</div>
+          <div class="dl-principle-desc">Define what <strong>good</strong> looks like as a <strong>testable criterion</strong> before writing a line of code</div>
+        </div>
+      </div>
+
+      <div class="dl-arrow-spacer"></div>
+
+      <div class="dl-principle-slot">
+        <div class="dl-connector"></div>
+        <div class="dl-two-cards">
+          <div class="dl-principle-card p2">
+            <div class="dl-principle-num">Principle 2</div>
+            <div class="dl-principle-desc">Eval every <strong>stage</strong> not just the output: <strong>code-based</strong>, <strong>LLM judge</strong>, human review</div>
+          </div>
+          <div class="dl-principle-card p3">
+            <div class="dl-principle-num">Principle 3</div>
+            <div class="dl-principle-desc">Ask <strong>yes/no</strong> not "rate 1-5". Three <strong>binary</strong> evals beat one score you don't trust</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dl-arrow-spacer"></div>
+
+      <div class="dl-principle-slot">
+        <div class="dl-connector"></div>
+        <div class="dl-empty-stage">Informed by evals</div>
+      </div>
+
+      <div class="dl-arrow-spacer"></div>
+
+      <div class="dl-principle-slot">
+        <div class="dl-connector"></div>
+        <div class="dl-two-cards">
+          <div class="dl-principle-card p4">
+            <div class="dl-principle-num">Principle 4</div>
+            <div class="dl-principle-desc">Read actual <strong>traces</strong> to tell <strong>spec failures</strong> from <strong>generalisation failures</strong>. Different root cause, different fix</div>
+          </div>
+          <div class="dl-principle-card p5">
+            <div class="dl-principle-num">Principle 5</div>
+            <div class="dl-principle-desc"><strong>Regression tests</strong> catch what you've seen. <strong>Production monitoring</strong> catches what you haven't. Humans catch what neither can</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loop-back arrow -->
+    <div class="dl-loop-back">
+      <svg viewBox="0 0 780 36" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="loop-arrow" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto">
+            <polygon points="8 0, 0 3, 8 6" class="loop-head"/>
+          </marker>
+        </defs>
+        <path d="M 680,4 Q 740,4 740,18 Q 740,32 390,32 Q 40,32 40,18 Q 40,4 100,4" class="loop-path" marker-end="url(#loop-arrow)"/>
+      </svg>
+      <span class="dl-loop-label">Continuous cycle</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==========================================
+     PRINCIPLE 1: DEFINE SUCCESS — PROSE
+     ========================================== -->
+<div class="article-section">
+  <div class="prose">
+    <h2>Principle 1 | Define success before you build</h2>
+    <p>Most teams start by building the pipeline and worry about measuring quality later. This is backwards. If you can't express what "good" looks like as a test, you don't understand the problem well enough to build a solution. This principle ensures that evals are your guide from the beginning, and not just a tick box QA exercise.</p>
+    <p>For the MediGen synthesis engine, the question is sharper than it looks: what does a good research answer actually look like? It answers the researcher's actual question rather than an adjacent one. Every claim is grounded in a specific passage from the corpus, not paraphrased or interpolated. Citations resolve to document, page, and section. The tone matches the register a senior researcher expects: confident where the evidence is strong, cautious where it is thin, and never speculative. None of this is vague aspiration. Each one is a testable criterion. Define these first, and every decision that follows has something to measure against.</p>
+    <p class="closing-line">If you can't test for it, you can't trust the build.</p>
+  </div>
+</div>
+
+<!-- PRINCIPLE 1: VISUAL -->
+<section class="slide slide--warm">
+  <div class="canvas">
+    <div class="header">
+      <div class="header-number">1</div>
+      <div class="header-text">Principle one</div>
+      <div class="header-line"></div>
+      <div class="header-text">Define success before you build</div>
+    </div>
+    <div class="p1-main">
+      <div class="chat-panel">
+        <div class="chat-header">
+          <div class="chat-avatar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d4745b" stroke-width="1.5">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </div>
+          <span class="chat-name">MediGen Synthesis</span>
+          <span class="chat-status">Online</span>
+        </div>
+        <div class="chat-body">
+          <div class="msg user">
+            <div class="msg-label">Researcher</div>
+            What internal evidence do we have on CPD-4821 efficacy against KRAS-G12C, and what was the outcome of the 2023 pilot study?
+          </div>
+          <div class="msg bot">
+            <div class="msg-label">Synthesis</div>
+            The 2023 pilot study (Protocol MG-4821-P1) enrolled 24 patients with KRAS-G12C positive NSCLC across three dose cohorts. At the recommended Phase 2 dose (200mg BID), the <span class="cite">confirmed objective response rate was 42%</span> (5/12 patients), with a median duration of response of 7.2 months.
+            <div class="policy-ref">Source: Protocol MG-4821-P1 &middot; Nakamura, Patel et al. &middot; 2023 &middot; Page 38, Table 4</div>
+          </div>
+        </div>
+      </div>
+      <div class="criteria-panel">
+        <div class="criteria-title">What does <em>good</em> look like?</div>
+        <div class="criteria-subtitle">Before writing a line of code, define every testable criterion for the synthesis engine.</div>
+        <div class="criteria-list">
+          <div class="criterion">
+            <div class="criterion-check pass">&#10003;</div>
+            <div class="criterion-content">
+              <div class="criterion-question">Answers the actual question</div>
+              <div class="criterion-detail">Both efficacy and pilot outcome addressed</div>
+            </div>
+            <span class="criterion-result pass">PASS</span>
+          </div>
+          <div class="criterion">
+            <div class="criterion-check pass">&#10003;</div>
+            <div class="criterion-content">
+              <div class="criterion-question">Passage-level citations</div>
+              <div class="criterion-detail">Cited to Protocol MG-4821-P1 page 38, Table 4</div>
+            </div>
+            <span class="criterion-result pass">PASS</span>
+          </div>
+          <div class="criterion">
+            <div class="criterion-check pass">&#10003;</div>
+            <div class="criterion-content">
+              <div class="criterion-question">No hallucinated claims</div>
+              <div class="criterion-detail">Every figure traceable to the source document</div>
+            </div>
+            <span class="criterion-result pass">PASS</span>
+          </div>
+          <div class="criterion">
+            <div class="criterion-check pass">&#10003;</div>
+            <div class="criterion-content">
+              <div class="criterion-question">Matches clinical register</div>
+              <div class="criterion-detail">Exact figures, no hedging or speculation</div>
+            </div>
+            <span class="criterion-result pass">PASS</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tagline">
+      <div class="tagline-text">If you can't test for it, you can't trust the build.</div>
+      <div class="tagline-line"></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==========================================
+     PRINCIPLE 2: DEFENCE IN DEPTH — PROSE
+     ========================================== -->
+<div class="article-section">
+  <div class="prose">
+    <h2>Principle 2 | Defence in depth</h2>
+    <p>Even with a clear definition of success, one test at the end of your pipeline isn't enough. LLM systems have multiple stages, and each stage can fail differently. A retrieval step can pull the wrong documents. A generation step can hallucinate from the right documents. A safety layer can miss edge cases. If you only evaluate the final output (task based), you'll know something went wrong but not where. So, you need both end-to-end evals as well as "turn based" evals, which measure the outcome of each. Typically, there are three types of evals that cover these; code-based evals, LLM as a Judge and Human Review. The same measuring suite can also surface performance issues like latency and cost per call, giving you operational visibility alongside quality.</p>
+    <p>So let's show this in practice by returning to the MediGen synthesis engine. It has a retrieval layer, a generation layer, and a safety layer, and each one needs its own eval. Did retrieval pull the right passages from the 50,000-document corpus? Did generation stay faithful to those passages, or interpolate between them? Did the safety check catch the engine inventing a study outcome that does not appear in any source document? Did the answer match the tone a senior researcher expects: confident where the evidence is strong, cautious where it is thin? Think of it like Swiss cheese: the holes in one slice get caught by the next.</p>
+    <p>An important concept here enabled by AI is the LLM as a Judge, where a separate model evaluates the outputs of the workflow model. The obvious question is how you validate the validator. If you're using an LLM to judge whether answers are faithful to the source passages, how do you know the judge itself is right? Typically, it makes sense to use a frontier or fine-tuned model that is potentially more expensive to keep scores in check. But you still need confidence in your judge. One approach is to run it against a set of human-labelled examples from MediGen's research team and track its true positive and true negative rates. Calibrate your judges the same way you'd calibrate any clinical instrument, because if you don't validate them, these judges are about as useful as a chocolate teapot.</p>
+  </div>
+</div>
+
+<!-- PRINCIPLE 2: VISUAL -->
+<section class="slide slide--warm">
+  <div class="canvas">
+    <div class="header">
+      <div class="header-number">2</div>
+      <div class="header-text">Principle two</div>
+      <div class="header-line"></div>
+      <div class="header-text">Defence in depth</div>
+    </div>
+    <div class="sequence-diagram">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 0 20px; position: relative; z-index: 1;">
+        <span style="font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--coral); flex-shrink: 0;">Workflow</span>
+        <span style="flex: 1; height: 1px; background: var(--border-light);"></span>
+      </div>
+      <div class="seq-pipeline">
+        <div class="seq-marker"><div class="seq-marker-dot"></div><div class="seq-marker-label">Query</div></div>
+        <div class="seq-arrow"></div>
+        <div class="seq-step"><div class="seq-step-box"><div class="seq-step-label">Step 1</div><div class="seq-step-name">Retrieval</div><div class="seq-step-desc">Pull passages from 50k-doc corpus</div></div></div>
+        <div class="seq-arrow"></div>
+        <div class="seq-step"><div class="seq-step-box"><div class="seq-step-label">Step 2</div><div class="seq-step-name">Synthesis</div><div class="seq-step-desc">Cited answer from retrieved passages</div></div></div>
+        <div class="seq-arrow"></div>
+        <div class="seq-step"><div class="seq-step-box"><div class="seq-step-label">Step 3</div><div class="seq-step-name">Safety</div><div class="seq-step-desc">Check grounding, register, citations</div></div></div>
+        <div class="seq-arrow"></div>
+        <div class="seq-marker"><div class="seq-marker-dot"></div><div class="seq-marker-label">Response</div></div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; margin: 20px 0 8px; padding: 0 20px; position: relative; z-index: 1;">
+        <span style="font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--coral); flex-shrink: 0;">Turn-based evals</span>
+        <span style="flex: 1; height: 1px; background: var(--border-light);"></span>
+      </div>
+      <div class="seq-evals-row">
+        <div class="seq-marker-spacer"></div><div class="seq-eval-spacer"></div>
+        <div class="seq-eval-slot"><div class="seq-eval-connector"></div><div class="seq-eval-card eval-code"><div class="seq-eval-type">Code-based</div><div class="seq-eval-question">Did retrieval pull passages the researcher has permission to read?</div><span class="seq-eval-result pass">PASS</span></div></div>
+        <div class="seq-eval-spacer"></div>
+        <div class="seq-eval-slot"><div class="seq-eval-connector"></div><div class="seq-eval-card eval-code"><div class="seq-eval-type">Code-based</div><div class="seq-eval-question">Does every numeric claim resolve to a cited passage?</div><span class="seq-eval-result fail">FAIL</span></div></div>
+        <div class="seq-eval-spacer"></div>
+        <div class="seq-eval-slot"><div class="seq-eval-connector"></div><div class="seq-eval-card eval-judge"><div class="seq-eval-type">LLM-as-Judge</div><div class="seq-eval-question">Is the synthesis faithful to the retrieved passages?</div><span class="seq-eval-result pass">PASS</span></div></div>
+        <div class="seq-eval-spacer"></div><div class="seq-marker-spacer"></div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; margin: 24px 0 8px; padding: 0 20px; position: relative; z-index: 1;">
+        <span style="font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--coral); flex-shrink: 0;">End-to-end eval</span>
+        <span style="flex: 1; height: 1px; background: var(--border-light);"></span>
+      </div>
+      <div style="padding: 0 20px; position: relative; z-index: 1;">
+        <div class="seq-eval-card eval-human" style="max-width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; gap: 20px;">
+          <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
+            <div class="seq-eval-type" style="margin-bottom: 0; flex-shrink: 0;">Human review</div>
+            <div class="seq-eval-question" style="margin-bottom: 0; text-align: left;">Research leads spot-check full syntheses for register, edge cases, and failures automated evals can't catch</div>
+          </div>
+          <span class="seq-eval-result pass">PASS</span>
+        </div>
+      </div>
+    </div>
+    <div class="tagline">
+      <div class="tagline-text">If you only evaluate the final output, you'll know something went wrong but not where.</div>
+      <div class="tagline-line"></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==========================================
+     PRINCIPLE 3: MAKE SUCCESS BINARY — PROSE
+     ========================================== -->
+<div class="article-section">
+  <div class="prose">
+    <h2>Principle 3 | Make success binary</h2>
+    <p>So you know where to place your evals. Now the question is what each one should actually look like. And here's where it is tempting to fall into the objectively measured 5 step criteria per eval. However, what does a 3 out of 5 mean when you're rating a synthesis answer about KRAS-G12C? "Okay but not great?" You'll find that two MediGen researchers rarely agree on what a 3 means, and an LLM judge is even less consistent. The scale feels precise but it measures nothing useful.</p>
+    <p>This is the "God Evaluator" anti-pattern, where a single prompt asks an LLM to score everything at once. It's unreliable and impossible to debug because the actual signal gets buried in noise.</p>
+    <p>The fix is simpler than you'd think: ask yes or no. "Did the answer cite a real passage in the corpus? Yes/No." "Does every numeric claim resolve to a specific source? Yes/No." "Does the register match how a senior researcher would write it? Yes/No." Each question gets its own evaluator. Binary decisions are much more reliable than Likert scales for both human reviewers and LLM judges, and if you need more granularity, you add more binary questions rather than stretching one question across five levels.</p>
+    <p class="closing-line">Three binary evals you trust will always beat one score out of five you don't.</p>
+  </div>
+</div>
+
+<!-- PRINCIPLE 3: VISUAL -->
+<section class="slide slide--warm">
+  <div class="canvas">
+    <div class="header">
+      <div class="header-number">3</div>
+      <div class="header-text">Principle three</div>
+      <div class="header-line"></div>
+      <div class="header-text">Make success binary</div>
+    </div>
+    <div class="binary-comparison">
+      <div class="comparison-side bad">
+        <div class="comparison-badge">Anti-pattern</div>
+        <div class="comparison-title">The "God Evaluator"</div>
+        <div class="likert-scale">
+          <div class="likert-item"><div class="likert-bar" style="height: 30px;"></div><span class="likert-label">1</span></div>
+          <div class="likert-item"><div class="likert-bar" style="height: 50px;"></div><span class="likert-label">2</span></div>
+          <div class="likert-item"><div class="likert-bar selected" style="height: 70px; position: relative;"></div><span class="likert-label">3</span></div>
+          <div class="likert-item"><div class="likert-bar" style="height: 50px;"></div><span class="likert-label">4</span></div>
+          <div class="likert-item"><div class="likert-bar" style="height: 30px;"></div><span class="likert-label">5</span></div>
+        </div>
+        <div class="likert-question">
+          "Rate the overall quality of this synthesis answer on a scale of 1-5"<br><br>
+          What does a 3 even mean?<br>
+          Two researchers will never agree.
+        </div>
+      </div>
+      <div class="comparison-side good">
+        <div class="comparison-badge">Best practice</div>
+        <div class="comparison-title">Binary evaluators</div>
+        <div class="binary-evals">
+          <div class="binary-eval-item"><span class="binary-eval-question">Cited real corpus passage?</span><span class="binary-eval-answer pass">YES</span></div>
+          <div class="binary-eval-item"><span class="binary-eval-question">Every numeric claim grounded?</span><span class="binary-eval-answer pass">YES</span></div>
+          <div class="binary-eval-item"><span class="binary-eval-question">Register matches researcher?</span><span class="binary-eval-answer pass">YES</span></div>
+        </div>
+        <div class="binary-tagline">Three binary evals you trust beat one score you don't.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==========================================
+     PRINCIPLE 4: UNDERSTAND REAL FAILURES — PROSE
+     ========================================== -->
+<div class="article-section">
+  <div class="prose">
+    <h2>Principle 4 | Understand real failures</h2>
+    <p>Moving into production territory when you are monitoring eval scores, and one drops... how do you diagnose and fix it?</p>
+    <p>This is where error analysis comes in. Read actual traces: the full record of what the system did from input to output with every intermediate step. This starts from day one, not after months in production. The moment your system produces its first outputs, go beyond the dashboards and start reading.</p>
+    <p>When you read traces, you'll see two kinds of error. The first is a specification failure: your instructions were ambiguous, so the model did exactly what you asked, just wrong. The fix is a prompt edit, not model tuning.</p>
+    <p>The second is a generalisation failure: the instructions were clear but the model couldn't handle a new input it hadn't seen before. The fix is more examples or fine-tuning. Confuse these two and you'll waste weeks tuning a model when the real problem is a two-line prompt edit. Either way, the burden sits with the Applied AI team, not the customer.</p>
+    <p>The synthesis engine has been live for two weeks and your evals are flagging that answers about CPD-4821 dosing are failing more often than other topics. You could tweak the prompt and hope for the best. Or you could pull 100 failing traces and actually read them. When you do, a pattern jumps out: the engine isn't hallucinating randomly. It's consistently quoting the pilot-study dose (200mg BID) as the standard dose, even when researchers ask about expanded-cohort or compassionate-use patients, which run on a different protocol. Clearly, that's not a model problem. The prompt never distinguished the pilot cohort from the expanded cohort, and retrieval is happily pulling the pilot protocol for every CPD-4821 query. No amount of model tuning fixes a broken spec. This is a specification failure. Fix the ambiguity first, then measure whether the fix holds on new inputs.</p>
+    <p class="closing-line">Back to our F1 analogy, don't tune the engine when the map is wrong.</p>
+  </div>
+</div>
+
+<!-- PRINCIPLE 4: VISUAL -->
+<section class="slide slide--warm">
+  <div class="canvas">
+    <div class="header">
+      <div class="header-number">4</div>
+      <div class="header-text">Principle four</div>
+      <div class="header-line"></div>
+      <div class="header-text">Understand real failures</div>
+    </div>
+    <div class="p4-layout">
+      <div class="trace-panel">
+        <div class="trace-header">
+          <span class="trace-header-title">Failing trace</span>
+          <span class="trace-header-id">trace-0847b</span>
+        </div>
+        <div class="trace-body">
+          <div class="trace-step"><div class="trace-step-icon ok">&#10003;</div><div class="trace-step-content"><div class="trace-step-label">Input</div><div class="trace-step-text">"What is the standard CPD-4821 dose for a compassionate-use patient with reduced hepatic function?"</div></div></div>
+          <div class="trace-step"><div class="trace-step-icon ok">&#10003;</div><div class="trace-step-content"><div class="trace-step-label">Retrieval</div><div class="trace-step-text">Pulled Protocol MG-4821-P1</div><div class="trace-step-detail">Matched on keywords "CPD-4821" and "dose" &middot; page 38, Table 4</div></div></div>
+          <div class="trace-step"><div class="trace-step-icon err">&#10007;</div><div class="trace-step-content"><div class="trace-step-label">Synthesis</div><div class="trace-step-text">Applied the pilot-study Phase 2 dose to a compassionate-use query</div><div class="trace-step-highlight">The prompt never distinguished pilot cohort from compassionate-use cohort. The model followed instructions correctly. The instructions were wrong.</div></div></div>
+          <div class="trace-step"><div class="trace-step-icon ok">&#10003;</div><div class="trace-step-content"><div class="trace-step-label">Output</div><div class="trace-step-text">"The recommended dose is 200mg BID, based on Protocol MG-4821-P1..."</div><div class="trace-step-detail">Confident, well-cited, completely wrong for this cohort.</div></div></div>
+        </div>
+      </div>
+      <div class="diagnosis-panel">
+        <div class="diagnosis-question">What <em>kind</em> of failure is this?</div>
+        <div class="diagnosis-card spec"><div class="diagnosis-card-type">Specification failure</div><div class="diagnosis-card-title">The map is wrong</div><div class="diagnosis-card-desc">Instructions were ambiguous. The model did exactly what you asked. It just wasn't what you meant.</div><div class="diagnosis-card-fix">&#8594; Fix the prompt, not the model</div></div>
+        <div class="diagnosis-card gen"><div class="diagnosis-card-type">Generalisation failure</div><div class="diagnosis-card-title">The engine stalls</div><div class="diagnosis-card-desc">Instructions were clear. The model couldn't handle a new input it hadn't seen before.</div><div class="diagnosis-card-fix">&#8594; Tune the model or add examples</div></div>
+        <div class="diagnosis-verdict"><span class="diagnosis-verdict-arrow">&#9658;</span><span class="diagnosis-verdict-text">This trace is a specification failure. The prompt never distinguished pilot cohort from compassionate-use cohort. Fix the spec first, then measure if the fix holds.</span></div>
+      </div>
+    </div>
+    <div class="tagline">
+      <div class="tagline-text">Don't tune the engine when the map is wrong.</div>
+      <div class="tagline-line"></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==========================================
+     PRINCIPLE 5: KEEP MEASURING — PROSE
+     ========================================== -->
+<div class="article-section">
+  <div class="prose">
+    <h2>Principle 5 | Keep measuring</h2>
+    <p>Shipping with evals isn't the finish line. It's the starting line. Production will always surface failures that no pre-launch test suite can anticipate, and you need two practices running continuously to stay ahead of them.</p>
+    <p>The first is regression tests for known failures. Run your golden dataset on every commit. These are the failure modes you've already discovered and fixed, and regression tests make sure they stay fixed. For the synthesis engine, this catches when a prompt update accidentally breaks the CPD-4821 dosing answers you fixed last month.</p>
+    <p>The second is production monitoring for new failures. Sample live traces, run your judges on them, and track success rates over time. This catches what your regression suite doesn't know to test for. The engine's tests all pass, but a new compound was added to the corpus last Tuesday with an interim safety addendum not yet indexed. Production monitoring is what catches the engine confidently synthesising an answer about a study that wasn't in the corpus when the evals were written.</p>
+    <p>Automated evals will inevitably drift. Hence the importance of reviewing traces, live examples of how researchers are using the engine. At some point, a human reviewer will notice that the engine is technically correct but weirdly overconfident when evidence is thin, something no binary eval was originally designed to catch. That observation becomes a new eval, and the whole cycle continues. Regression tests catch what you've seen before, production monitoring catches what you haven't, and humans notice what neither can.</p>
+  </div>
+</div>
+
+<!-- PRINCIPLE 5: VISUAL -->
+<section class="slide slide--warm">
+  <div class="canvas">
+    <div class="header">
+      <div class="header-number">5</div>
+      <div class="header-text">Principle five</div>
+      <div class="header-line"></div>
+      <div class="header-text">Keep measuring</div>
+    </div>
+    <div class="lifecycle">
+      <div class="lifecycle-ring">
+        <div class="lifecycle-track"></div>
+        <div class="lifecycle-arrows">
+          <svg viewBox="0 0 420 400" xmlns="http://www.w3.org/2000/svg">
+            <defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" class="arrow-head"/></marker></defs>
+            <path d="M 280,60 Q 340,90 350,155" class="arrow-path" marker-end="url(#arrowhead)"/>
+            <path d="M 350,245 Q 340,310 280,340" class="arrow-path" marker-end="url(#arrowhead)"/>
+            <path d="M 140,340 Q 80,310 70,245" class="arrow-path" marker-end="url(#arrowhead)"/>
+            <path d="M 70,155 Q 80,90 140,60" class="arrow-path" marker-end="url(#arrowhead)"/>
+          </svg>
+        </div>
+        <div class="lifecycle-center"><div class="lifecycle-center-title">Continuous<br>evaluation</div><div class="lifecycle-center-sub">THE RACE NEVER ENDS</div></div>
+        <div class="lifecycle-node"><div class="lifecycle-node-icon">&#8635;</div><div class="lifecycle-node-title">Regression tests</div><div class="lifecycle-node-desc">Golden dataset runs on every commit. Known failures stay fixed.</div></div>
+        <div class="lifecycle-node"><div class="lifecycle-node-icon">&#9673;</div><div class="lifecycle-node-title">Production monitoring</div><div class="lifecycle-node-desc">Sample live traces. Run judges. Track success rates over time.</div></div>
+        <div class="lifecycle-node"><div class="lifecycle-node-icon">&#128065;</div><div class="lifecycle-node-title">Human review</div><div class="lifecycle-node-desc">Catches what automated evals miss. "Correct but weirdly overconfident."</div></div>
+        <div class="lifecycle-node"><div class="lifecycle-node-icon">+</div><div class="lifecycle-node-title">New evals created</div><div class="lifecycle-node-desc">Human observations become new binary evaluators. The cycle continues.</div></div>
+      </div>
+    </div>
+    <div class="tagline">
+      <div class="tagline-text">The car on the track isn't slower. It's the only one that finishes the race.</div>
+      <div class="tagline-line"></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==========================================
+     CLOSING — PROSE
+     ========================================== -->
+<div class="article-section">
+  <div class="prose">
+    <h2>The track doesn't slow you down</h2>
+    <p>Spending significant development time on evals can feel like overhead, extra work that delays shipping the MediGen synthesis engine. But without them, you ship fast once and then spend months debugging in production with frustrated researchers as your test suite. With evals, you ship with confidence and iterate faster because you know exactly what's working and what isn't.</p>
+    <p>These five principles change how MediGen builds, but they also change how MediGen scopes projects, how the team decides what to ship, and how external vendors get evaluated. When someone pitches you an AI solution, ask them where their evals are. If the answer is "we'll add those later," you're looking at an F1 car with no track.</p>
+    <p class="closing-line">Build the synthesis engine for the track its researchers will be racing on. That's how you earn their trust and keep it.</p>
+  </div>
+</div>
+
+</body>
+</html>
